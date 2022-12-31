@@ -48,6 +48,8 @@ tasks.named('test') {
 }
 
 //querydsl 추가 시작
+// 맨위 plugin 세팅과 맞물려 build 될 때, Q파일 생성함.
+// 세팅이 조금씩 바뀜. -> 안되면 구글 검색하자!
 def querydslDir = "$buildDir/generated/querydsl"
 
 querydsl {
