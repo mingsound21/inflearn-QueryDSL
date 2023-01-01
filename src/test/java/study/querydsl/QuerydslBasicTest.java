@@ -14,6 +14,7 @@ import study.querydsl.entity.Team;
 import javax.persistence.EntityManager;
 
 import static org.assertj.core.api.Assertions.*;
+import static study.querydsl.entity.QMember.*;
 
 
 @SpringBootTest
@@ -27,6 +28,8 @@ public class QuerydslBasicTest {
 
     @BeforeEach // 모든 테스트 전에 실행됨
     public void before() {
+        queryFactory = new JPAQueryFactory(em); // queryFactory 생성
+
         // given
         // 팀 2개 생성, 저장
         Team teamA = new Team("teamA");
@@ -70,7 +73,8 @@ public class QuerydslBasicTest {
         // 2. Q클래스 생성
         // QMember, QTeam 파일 생성: gradle 탭 - Tasks - other - compileQuerydsl 실행
         // >> build/generated 안에 생성된 Q파일 확인 가능
-        QMember m = new QMember("m");// "m"이라는 값으로 어떤 QMember인지 구분
+        QMember m = new QMember("m");// 방법 1) 별칭 직접 지정, "m"이라는 값으로 어떤 QMember인지 구분
+        // QMember m2 = member; // 방법 2) 기본 인스턴스 사용
 
         // 3. 쿼리 작성
         Member findMember = queryFactory
@@ -78,6 +82,22 @@ public class QuerydslBasicTest {
                 .from(m)
                 .where(m.username.eq("member1")) // 중요!) 파라미터 바인딩 대신 eq로 짜도 자동으로 JDBC에 있는 prepareStatement로 파라미터 바인딩함. -> 쿼리 나간 거 보면 ?가 있음.
                                                         // ** 파라미터 바인딩 -> SQL Injection 공격 방지 가능
+                .fetchOne();
+
+        // 검증
+        assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    // 권장하는 방법, 깔끔함
+    // 기본 인스턴스를 static import와 함께 사용
+    @Test
+    public void startQuerydsl2() {
+        // memeber1을 찾아라
+
+        Member findMember = queryFactory
+                .select(member)// QMember.member 에서 QMember static import하면 member라고 적을 수 있음.
+                .from(member)
+                .where(member.username.eq("member1"))
                 .fetchOne();
 
         // 검증
