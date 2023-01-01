@@ -1,5 +1,6 @@
 package study.querydsl;
 
+import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +13,8 @@ import study.querydsl.entity.QMember;
 import study.querydsl.entity.Team;
 
 import javax.persistence.EntityManager;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 import static study.querydsl.entity.QMember.*;
@@ -139,6 +142,45 @@ public class QuerydslBasicTest {
                 .fetchOne();
 
         assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    /**
+     * 결과 조회 쿼리
+     */
+    @Test
+    public void resultFetch() {
+        // 1. fetch() : 리스트 조회
+        List<Member> fetch = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        // 2. fetchOne() : 단 건 조회
+        Member fetchOne = queryFactory
+                .selectFrom(member)
+                .fetchOne();
+
+        // 3. fetchFirst() : 처음 1개 조회
+        Member fetchFirst = queryFactory
+                .selectFrom(member)
+                .fetchFirst();// .limit(1).fetchOne()과 같음
+
+        // 4. fetchResults() : 페이징 정보 포함. total count 쿼리까지 총 쿼리 2방 나감
+        // 쿼리 2방 나감 (total count 가져와야해서)
+        QueryResults<Member> results = queryFactory
+                .selectFrom(member)
+                .fetchResults();
+        
+        // 페이징 관련 함수들 사용 가능
+        results.getTotal();
+        List<Member> content = results.getResults(); // contents 꺼내기
+        results.getLimit(); // 쿼리에 쓰인 limit 값 가져오기
+
+        
+        // 5. fetchCount() : count쿼리로 변경해서 count 수 조회
+        long total = queryFactory
+                .selectFrom(member)
+                .fetchCount();
+
     }
 
 }
