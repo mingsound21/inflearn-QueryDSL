@@ -104,4 +104,41 @@ public class QuerydslBasicTest {
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
 
+    /**
+     * 검색 조건 쿼리 - .and() 체이닝 사용
+     */
+    @Test
+    public void search() {
+        // 이름이 member1이면서 나이가 10살인 사람 조회
+
+        Member findMember = queryFactory
+                .selectFrom(member) // .select, .from을 합친 것
+                .where(  // where 조건 추가: .and, .or로 체이닝해서 조건 추가 가능
+                        member.username.eq("member1")
+                        .and(member.age.eq(10))
+                )
+                .fetchOne();
+
+        assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    /**
+     * 검색 조건 쿼리 - where param으로 넘겨 and 사용
+     * # 김영한 선생님은 and 조건만 있는 경우 이 방법을 선호
+     */
+    @Test
+    public void searchAndParam() {
+        // 이름이 member1이면서 나이가 10살인 사람 조회
+
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(// where: param 넘긴 것들 다 and로 묶임
+                        member.username.eq("member1"),
+                        member.age.eq(10) // .and 말고 그냥 ,로 끊어서 작성해도 and로 JPQL 작성됨.
+                )
+                .fetchOne();
+
+        assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
 }
