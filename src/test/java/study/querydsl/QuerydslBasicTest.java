@@ -346,4 +346,80 @@ public class QuerydslBasicTest {
                 .extracting("username")
                 .containsExactly("teamA", "teamB");
     }
+
+    /**
+     * ON절 - 1. 조인 대상 필터링
+     *
+     * 회원과 팀 조인하면서, 팀 이름이 teamA인 팀만 조인, 회원은 모두 조회
+     * JPQL: SELECT m, t FROM Member m LEFT JOIN m.team t ON t.name = 'teamA';
+     */
+    @Test
+    public void join_on_filtering() {
+        List<Tuple> result = queryFactory
+                .select(member, team) // 결과 tuple인 이유: select에서 여러 타입 지정되어서
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA"))
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+
+        // 내부 조인에서의 on절은 where절에 작성해도 결과가 같다.
+        List<Tuple> innerJoin_where = queryFactory
+                .select(member, team)
+                .from(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+
+        for (Tuple tuple : innerJoin_where) {
+            System.out.println("tuple = " + tuple); // 대신 결과에서는 모든 회원이 아니라, teamA인 회원만 나옴(2명)
+        }
+    }
+
+    /**
+     *  ON절 - 2. 연관관계 없는 엔티티 외부 조인
+     *
+     * 예) 회원의 이름과 팀의 이름이 같은 대상 외부 조인
+     *
+     * JPQL: SELECT m, t FROM Member m LEFT JOIN Team t on m.username = t.name
+     * SQL: SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.username = t.name
+     */
+    @Test
+    public void join_on_no_relation() {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+
+        // on 조인
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name)) // member.username과 team.name은 관계가 없는데, 이 두 필드로 외부 조인
+                .fetch();
+
+        // 일반 leftjoin
+        List<Tuple> result2 = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team) // member.team_id = team.team_id
+                .fetch();
+
+        // leftJoin 부분 잘 보기
+        // 일반 조인 : leftJoin(member.team, team)
+        // on 조인 : from(member).leftJoin(team).on(xxx)
+
+
+        System.out.println("======= <ON 조인> : .from(member).leftJoin(team).on(member.username.eq(team.name)) =======");
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+        System.out.println("\n\n");
+
+        System.out.println("======= <일반 조인> : .from(member).leftjoin(member.team, team) =======");
+        for (Tuple tuple : result2) {
+            System.out.println("tuple = " + tuple);
+        }
+
+    }
 }
