@@ -2,6 +2,7 @@ package study.querydsl;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,9 +16,12 @@ import study.querydsl.entity.QTeam;
 import study.querydsl.entity.Team;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnit;
 
 import java.util.List;
 
+import static com.querydsl.jpa.JPAExpressions.*;
 import static org.assertj.core.api.Assertions.*;
 import static study.querydsl.entity.QMember.*;
 import static study.querydsl.entity.QTeam.*;
@@ -421,5 +425,132 @@ public class QuerydslBasicTest {
             System.out.println("tuple = " + tuple);
         }
 
+    }
+
+    @PersistenceUnit
+    EntityManagerFactory emf;
+
+    /**
+     * 페치 조인 - 미적용
+     */
+    @Test
+    public void fetchJoinNo() throws Exception {
+        // 영속성 컨텍스트 깨끗하게 비움
+        em.flush();
+        em.clear();
+
+        // 멤버 1명 조회
+        // member(N) - team(1) : LAZY -> member 조회시 team은 프록시
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam()); // emf.getPersistenceUnitUtil().isLoaded(객체)) : 해당 객체가 초기화되었는지 여부
+        assertThat(loaded).as("페치 조인 미적용").isFalse();
+    }
+
+    /**
+     * 페치 조인 - 적용
+     */
+    @Test
+    public void fetchJoinUse() throws Exception {
+        // 영속성 컨텍스트 깨끗하게 비움
+        em.flush();
+        em.clear();
+
+        // 멤버 1명 조회
+        // member(N) - team(1) : LAZY -> member 조회시 team은 프록시
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin() // join 뒤에 .fetchJoin() : member 조회시 연관된 Team까지 한방쿼리로 가져옴
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam()); // emf.getPersistenceUnitUtil().isLoaded(객체)) : 해당 객체가 초기화되었는지 여부
+        assertThat(loaded).as("페치 조인 적용").isTrue();
+    }
+
+    /**
+     * 서브 쿼리 - eq 사용
+     */
+    @Test
+    public void subQuery() throws Exception {
+        QMember memberSub = new QMember("memberSub"); // 서브쿼리 테이블명은 메인쿼리 테이블명과 달라야하기때문
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.eq( // eq 사용) 메인 쿼리: 멤버의 나이가 최댓값인 회원 조회
+                        // 서브쿼리: member의 나이의 최댓값 조회
+                        select(memberSub.age.max())
+                                .from(memberSub)
+                ))
+                .fetch();
+
+        assertThat(result).extracting("age")
+                .containsExactly(40);
+
+    }
+
+    /**
+     * 서브 쿼리 - goe 사용
+     */
+    @Test
+    public void subQueryGoe() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.goe( // goe 사용) 메인 쿼리: 멤버의 나이가 평균값보다 크거나 같은 멤버 조회
+                        // 서브쿼리: member의 나이의 평균값 조회
+                        select(memberSub.age.avg())
+                                .from(memberSub)
+                ))
+                .fetch();
+
+        assertThat(result).extracting("age")
+                .containsExactly(30, 40);
+
+    }
+
+    /**
+     * 서브 쿼리 - in
+     */
+    @Test
+    public void subQueryIn() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.in( // in 사용) 메인 쿼리: 멤버의 나이 10살보다 많은 멤버 조회
+                        // 서브쿼리: 10살보다 많은 나이값들 조회
+                        select(memberSub.age)
+                                .from(memberSub)
+                                .where(memberSub.age.gt(10))
+                ))
+                .fetch();
+
+        assertThat(result).extracting("age")
+                .containsExactly(20, 30, 40);
+    }
+
+    /**
+     * 서브 쿼리 - select 절
+     */
+    @Test
+    public void selectSubQuery() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+
+        List<Tuple> result = queryFactory
+                .select(member.username,
+                        // 서브 쿼리: 유저 평균 나이 조회
+                        select(memberSub.age.avg())
+                                .from(memberSub))
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
     }
 }
