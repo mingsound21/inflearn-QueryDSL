@@ -211,4 +211,38 @@ public class QuerydslBasicTest {
         assertThat(memberNull.getUsername()).isNull();
     }
 
+    /**
+     * 페이징
+     */
+    @Test
+    public void paging1() {
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1) // 앞에 몇개 스킵할건지, 0부터 시작
+                .limit(2) // 몇개의 데이터 가져올건지
+                .fetch();
+
+        assertThat(result.size()).isEqualTo(2);
+    }
+
+    /**
+     * 페이징 - 전체 조회 수 필요
+     */
+    @Test
+    public void paging2() {
+        // fetchResults : 쿼리 2번(count query, contents가져오는 query)
+        QueryResults<Member> queryResults = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1) // 앞에 몇개 스킵할건지, 0부터 시작
+                .limit(2) // 몇개의 데이터 가져올건지, 최대 2건 조회
+                .fetchResults();
+
+        assertThat(queryResults.getTotal()).isEqualTo(4);
+        assertThat(queryResults.getLimit()).isEqualTo(2);
+        assertThat(queryResults.getOffset()).isEqualTo(1);
+        assertThat(queryResults.getResults().size()).isEqualTo(2); // 컨텐츠
+    }
+
 }
