@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.dto.MemberDto;
+import study.querydsl.dto.QMemberDto;
 import study.querydsl.dto.UserDto;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
@@ -823,5 +824,34 @@ public class QuerydslBasicTest {
         for (UserDto userDto : result) {
             System.out.println("userDto = " + userDto);
         }
+    }
+
+    /**
+     * 프로젝션과 결과 반환 - @QueryProjection
+     */
+    @Test
+    public void findDtoByQueryProjection() throws Exception {
+        List<MemberDto> result = queryFactory
+                .select(new QMemberDto(member.username, member.age)) // 컴파일러로 타입 체크 가능
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+
+        // 단점 : DTO에 QueryDsl 어노테이션 유지 + DTO까지 Q파일 생성 필요
+    }
+
+    /**
+     * distinct
+     */
+    @Test
+    public void distinct() throws Exception {
+        List<String> result = queryFactory
+                .select(member.username).distinct() // 그냥 .distinct()하면 된다, 참고로 distinct는 모든 컬럼에 적용된다.
+                .from(member)
+                .fetch();
+
     }
 }
