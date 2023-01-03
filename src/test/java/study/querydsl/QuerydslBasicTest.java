@@ -657,4 +657,42 @@ public class QuerydslBasicTest {
             System.out.println("s = " + s);
         }
     }
+
+    /**
+     * 프로젝션과 결과반환 기본 - 프로젝션 대상이 하나: 타입 정확히 지정 가능
+     */
+    @Test
+    public void simpleProjection() throws Exception {
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+                .fetch();
+
+        // member 객체 조회 -> 이것도 프로젝션 대상이 하나(반환 타입 명확하게 지정 Member라고 가능)
+        List<Member> result2 = queryFactory
+                .select(member)
+                .from(member)
+                .fetch();
+    }
+
+    /**
+     * 프로젝션 - 프로젝션 대상이 둘 이상: 튜플 조회
+     */
+    @Test
+    public void tupleProjection() throws Exception {
+        List<Tuple> result = queryFactory
+                .select(member.username, member.age) // username, age 2개 프로젝션 -> 반환 타입 지정 못하니까 Tuple
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            String username = tuple.get(member.username); // 튜플에서 값 꺼내기 : Tuple.get(Q타입.속성)
+            Integer age = tuple.get(member.age);
+
+            System.out.println("username = " + username);
+            System.out.println("age = " + age);
+        }
+        
+
+    }
 }
