@@ -12,6 +12,7 @@ import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -983,4 +984,45 @@ public class QuerydslBasicTest {
                 .execute();
 
     }
+
+    /**
+     * SQL function 호출하기 : replace
+     */
+    @Test
+    public void sqlFunction() throws Exception {
+
+        // member.username을 조회, 대신 username에서 member가 있으면 M으로 replace
+        List<String> result = queryFactory
+                .select(Expressions.stringTemplate("function('replace', {0}, {1}, {2})",// 숫자면 numberTemplate
+                        member.username, "member", "M"))
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+
+    }
+
+    /**
+     * SQL function 호출하기 : lower(소문자로 변경)
+     *
+     * 소문자로 변경해서 비교해라
+     */
+    @Test
+    public void sqlFunction2() throws Exception {
+
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+                .where(member.username.eq(Expressions.stringTemplate("function('lower', {0})"
+                        , member.username)))
+                // .where(member.username.eq(member.username.lower())) // lower같이 자주쓰는 ansi 표준함수들은 querydsl이 내장하고 있어 다음과 같이 사용도 가능
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
 }
