@@ -1,16 +1,25 @@
 package study.querydsl.repository;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
+import study.querydsl.dto.MemberSearchCondition;
+import study.querydsl.dto.MemberTeamDto;
+import study.querydsl.dto.QMemberDto;
+import study.querydsl.dto.QMemberTeamDto;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
+import study.querydsl.entity.QTeam;
 
 import javax.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 
+import static org.springframework.util.StringUtils.*;
 import static study.querydsl.entity.QMember.*;
+import static study.querydsl.entity.QTeam.*;
 
 @Repository // @Transactional없어서 Service단에서 붙여주거나, 이 Repository에 추가 필요함!!
 public class MemberJpaRepository {
@@ -67,6 +76,39 @@ public class MemberJpaRepository {
         return queryFactory
                 .selectFrom(member)
                 .where(member.username.eq(username))
+                .fetch();
+    }
+
+    /**
+     * 검색
+     */
+    public List<MemberTeamDto> searchByBuilder(MemberSearchCondition memberSearchCondition){
+        BooleanBuilder builder = new BooleanBuilder();
+
+        if (hasText(memberSearchCondition.getUsername())) { // StringUtils.hasText 사용한 이유 : 이름이 null로 들어올 수도 있고 "" 빈 문자열로 들어올 수도 있어서
+            builder.and(member.username.eq(memberSearchCondition.getUsername()));
+        }
+        if (hasText(memberSearchCondition.getTeamName())) {
+            builder.and(team.name.eq(memberSearchCondition.getTeamName()));
+        }
+        if (memberSearchCondition.getAgeGoe() != null){
+            builder.and(member.age.goe(memberSearchCondition.getAgeGoe()));
+        }
+        if (memberSearchCondition.getAgeLoe() != null){
+            builder.and(member.age.loe(memberSearchCondition.getAgeLoe()));
+        }
+
+        return queryFactory
+                .select(new QMemberTeamDto(
+                        member.id.as("memberId"), // member Entity는 필드명 id, MemberTeamDto는 필드명 memberId
+                        member.username,
+                        member.age,
+                        team.id.as("teamId"),
+                        team.name.as("teamName")
+                ))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(builder) // builder
                 .fetch();
     }
 }
