@@ -2,14 +2,17 @@ package study.querydsl.repository;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.support.PageableExecutionUtils;
 import study.querydsl.dto.MemberSearchCondition;
 import study.querydsl.dto.MemberTeamDto;
 import study.querydsl.dto.QMemberTeamDto;
+import study.querydsl.entity.Member;
 
 import javax.persistence.EntityManager;
 import java.util.List;
@@ -89,16 +92,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
         List<MemberTeamDto> content = getContent(condition, pageable);// 컨텐츠만 가져옴
 
         // 전체 데이터 수
-        long total = getTotal(condition);
-
-        return new PageImpl<>(content, pageable, total); // PageImpl : Page의 구현체
-    }
-
-    /**
-     * 컨텐츠 가져오는 쿼리
-     */
-    private long getTotal(MemberSearchCondition condition) {
-        return queryFactory
+        JPAQuery<Member> countQuery = queryFactory
                 .selectFrom(member)
                 .leftJoin(member.team, team)
                 .where(
@@ -106,12 +100,15 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                         teamNameEq(condition.getTeamName()),
                         ageGoe(condition.getAgeGoe()),
                         ageLoe(condition.getAgeLoe())
-                ) // where절 파라미터 사용
-                .fetchCount();
+                );// where절 파라미터 사용
+        // countQuery.fetchCount(); // fetchCount하지 않으면 쿼리가 날라가지 않음.
+
+        return PageableExecutionUtils.getPage(content, pageable, () -> countQuery.fetchCount()); // total count 쿼리를 날리지 않아도 되는 경우에는 3번째 인자로 넘긴 함수(total count 구하는 쿼리 실행 함수)를 실행하지 않음
+        // return new PageImpl<>(content, pageable, total); // PageImpl : Page의 구현체
     }
 
     /**
-     * total count 가져오는 쿼리
+     * 컨텐츠 가져오는 쿼리
      */
     private List<MemberTeamDto> getContent(MemberSearchCondition condition, Pageable pageable) {
         return queryFactory
