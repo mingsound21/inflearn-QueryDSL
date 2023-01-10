@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: local # 로컬에서 돌린다는 의미 (개발 :dev, 운영: real)
+    active: test # 로컬에서 돌린다는 의미 (개발 :dev, 운영: real)
   datasource:
     url: jdbc:h2:tcp://localhost/~/querydsl
     username: sa
